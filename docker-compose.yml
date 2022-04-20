@@ -1,0 +1,22 @@
+version: "3"
+
+services:
+  upload-service:
+    build: ./
+    ports:
+      - "29000:29000"
+    volumes:
+      - ./data:/flask/data
+    deploy:
+      restart_policy:
+        condition: on-failure
+
+  fileBrowser:
+    image: filebrowser/filebrowser
+    volumes:
+      - ./data:/srv
+    ports:
+      - "29001:80"
+    deploy:
+      restart_policy:
+        condition: on-failure
