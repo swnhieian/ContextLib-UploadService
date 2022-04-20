@@ -1,8 +1,9 @@
 version: "3"
 
 services:
-  upload-service:
+  contextlib-upload:
     build: ./
+    image: swnhieian/context-lib-upload
     ports:
       - "29000:29000"
     volumes:
@@ -11,7 +12,7 @@ services:
       restart_policy:
         condition: on-failure
 
-  fileBrowser:
+  contextlib-fileBrowser:
     image: filebrowser/filebrowser
     volumes:
       - ./data:/srv
