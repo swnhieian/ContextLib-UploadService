@@ -429,6 +429,17 @@ def upload_collected_data():
         fout.write(commit)
     return {}
 
+'''
+Name: list_files in dir
+Method: GET
+Content-Type: multipart/form-data
+Form:
+    - name
+'''
+@app.route("/dir", methods=['GET'])
+def list_file_dir():
+    filename = request.args.get("name")
+    return json.dumps(os.listdir(os.path.join(file_utils.DATA_FILE_ROOT, filename)))
 
 
 
