@@ -20,7 +20,7 @@ def get_dex_name_path(userId, name):
     return os.path.join(get_dex_user_path(userId), name)
 
 def get_dex_path(userId, name, timestamp):
-    d = datetime.datetime.fromtimestamp(timestamp / 1000)
+    d = datetime.datetime.fromtimestamp(int(timestamp) / 1000)
     return os.path.join(get_dex_name_path(userId, name), d.year, d.month, d.day, timestamp)
 
 def get_taskList_path(taskListId):
