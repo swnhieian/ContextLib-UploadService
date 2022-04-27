@@ -3,6 +3,7 @@ import json
 import shutil
 import hashlib
 from time import time
+import datetime
 
 DATA_ROOT = os.path.join("..", "data")
 DATA_RECORD_ROOT = os.path.join(DATA_ROOT, "record")
@@ -19,7 +20,8 @@ def get_dex_name_path(userId, name):
     return os.path.join(get_dex_user_path(userId), name)
 
 def get_dex_path(userId, name, timestamp):
-    return os.path.join(get_dex_name_path(userId, name), timestamp)
+    d = datetime.datetime.fromtimestamp(timestamp / 1000)
+    return os.path.join(get_dex_name_path(userId, name), d.year, d.month, d.day, timestamp)
 
 def get_taskList_path(taskListId):
     return os.path.join(DATA_RECORD_ROOT, taskListId)
