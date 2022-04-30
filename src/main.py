@@ -8,6 +8,12 @@ import json
 import file_utils
 import os
 
+import zipfile
+
+from ml.cutter.peak_cutter import PeakCutter
+from ml.cutter.random_cutter import RandomCutter
+
+from train_process import TrainProcess
 
 app = Flask(__name__)
 cors = CORS(app)
@@ -19,12 +25,24 @@ saver_future_list = []
 trainer = ThreadPoolExecutor(max_workers=1)
 train_processes = []
 
+file_utils.mkdir("../data/record/TL13r912je")
 if not os.path.exists("../data/file/config.json"):
-    file_utils.mkdir("../data/file")
     config = {
         "context": [
             {
                 "builtInContext": "Informational",
+                "sensorType": ["ACCESSIBILITY", "BROADCAST"],
+                "integerParamKey": [],
+                "integerParamValue": [],
+                "longParamKey": [],
+                "longParamValue": [],
+                "floatParamKey": [],
+                "floatParamValue": [],
+                "booleanParamKey": [],
+                "booleanParamValue": []
+            },
+            {
+                "builtInContext": "Config",
                 "sensorType": ["ACCESSIBILITY", "BROADCAST"],
                 "integerParamKey": [],
                 "integerParamValue": [],
@@ -61,7 +79,74 @@ if not os.path.exists("../data/file/config.json"):
                 "booleanParamKey": [],
                 "booleanParamValue": []
             }
-        ]
+        ],
+        "listenedSystemActions": [
+            "android.intent.action.AIRPLANE_MODE",
+            "android.intent.action.SCREEN_OFF",
+            "android.intent.action.SCREEN_ON",
+            "android.bluetooth.device.action.ACL_CONNECTED",
+            "android.intent.action.APPLICATION_RESTRICTIONS_CHANGED",
+            "android.intent.action.BATTERY_LOW",
+            "android.intent.action.BATTERY_OKAY",
+            "android.intent.action.BOOT_COMPLETED",
+            "android.intent.action.CONFIGURATION_CHANGED",
+            "android.intent.action.DOCK_EVENT",
+            "android.intent.action.DREAMING_STARTED",
+            "android.intent.action.DREAMING_STOPPED",
+            "android.intent.action.EXTERNAL_APPLICATIONS_AVAILABLE",
+            "android.intent.action.EXTERNAL_APPLICATIONS_UNAVAILABLE",
+            "android.intent.action.HEADSET_PLUG",
+            "android.intent.action.INPUT_METHOD_CHANGED",
+            "android.intent.action.LOCALE_CHANGED",
+            "android.intent.action.LOCKED_BOOT_COMPLETED",
+            "android.intent.action.MEDIA_BAD_REMOVAL",
+            "android.intent.action.MEDIA_BUTTON",
+            "android.intent.action.MEDIA_CHECKING",
+            "android.intent.action.MEDIA_EJECT",
+            "android.intent.action.MEDIA_MOUNTED",
+            "android.intent.action.MEDIA_NOFS",
+            "android.intent.action.MEDIA_REMOVED",
+            "android.intent.action.MEDIA_SCANNER_FINISHED",
+            "android.intent.action.MEDIA_SCANNER_STARTED",
+            "android.intent.action.MEDIA_SHARED",
+            "android.intent.action.MEDIA_UNMOUNTABLE",
+            "android.intent.action.MEDIA_UNMOUNTED",
+            "android.intent.action.MY_PACKAGE_REPLACED",
+            "android.intent.action.PACKAGES_SUSPENDED",
+            "android.intent.action.PACKAGES_UNSUSPENDED",
+            "android.intent.action.PACKAGE_ADDED",
+            "android.intent.action.PACKAGE_CHANGED",
+            "android.intent.action.PACKAGE_DATA_CLEARED",
+            "android.intent.action.PACKAGE_FIRST_LAUNCH",
+            "android.intent.action.PACKAGE_FULLY_REMOVED",
+            "android.intent.action.PACKAGE_NEEDS_VERIFICATION",
+            "android.intent.action.PACKAGE_REMOVED",
+            "android.intent.action.PACKAGE_REPLACED",
+            "android.intent.action.PACKAGE_RESTARTED",
+            "android.intent.action.PACKAGE_VERIFIED",
+            "android.intent.action.ACTION_POWER_CONNECTED",
+            "android.intent.action.ACTION_POWER_DISCONNECTED",
+            "android.intent.action.PROVIDER_CHANGED",
+            "android.intent.action.REBOOT",
+            "android.intent.action.ACTION_SHUTDOWN",
+            "android.intent.action.TIMEZONE_CHANGED",
+            "android.intent.action.TIME_SET",
+            "android.intent.action.UID_REMOVED",
+            "android.intent.action.USER_BACKGROUND",
+            "android.intent.action.USER_FOREGROUND",
+            "android.intent.action.USER_PRESENT",
+            "android.intent.action.USER_UNLOCKED",
+            "android.bluetooth.device.action.ACL_DISCONNECT_REQUESTED",
+            "android.bluetooth.device.action.ACL_DISCONNECTED",
+            "android.net.wifi.STATE_CHANGE",
+            "android.net.wifi.WIFI_STATE_CHANGED"
+        ],
+        "listenedSystemURIs": [
+            "content://settings/system",
+            "content://settings/global"
+        ],
+        "overrideSystemActions": False,
+        "overrideSystemURIs": False
     }
 
     file_utils.save_json(config, "../data/file/config.json")
@@ -405,43 +490,202 @@ Form:
 
 
     /dex
-        /userId
-            /name
+        /name
+            /userId
                 /timestamp
                     - {}.bin
 '''
+
 @app.route("/collected_data", methods=['POST'])
 def upload_collected_data():
     file = request.files["file"]
+    print(file.filename)
+    meta = json.loads(request.form.get("meta"))
+    print(meta)
+
+    if file.filename[-4:] == '.zip':
+        temp_path = file_utils.get_temp_path()
+        file_path = os.path.join(temp_path, file.filename)
+        file_utils.mkdir(temp_path)
+        file_utils.save_file(file, file_path)
+
+        file_zip = zipfile.ZipFile(file_path, 'r')
+        for name in file_zip.namelist():
+            print(name)
+            meta_ = None
+            for m in meta:
+                if m['file'] == name:
+                    meta_ = m
+            print(meta_)
+            if meta_ is not None:
+                path = file_utils.get_dex_path(meta_['userId'], meta_['name'], str(meta_['timestamp']))
+                file_utils.mkdir(path)
+                file_zip.extract(meta_['file'], path)
+                with open(os.path.join(path, meta_['file'] + '.meta'), 'w') as fout:
+                    fout.write(json.dumps(meta_))
+        file_zip.close()
+        os.remove(file_path)
+    else:
+        path = file_utils.get_dex_path(meta[0]['userId'], meta[0]['name'], str(meta[0]['timestamp']))
+        file_utils.mkdir(path)
+        file_path = os.path.join(path, meta[0]['file'])
+        file_utils.save_file(file, file_path)
+        with open(os.path.join(path, meta[0]['file'] + '.meta'), 'w') as fout:
+            fout.write(json.dumps(meta[0]))
+
+
+    '''
     fileType = request.form.get("fileType")
     userId = request.form.get("userId")
     name = request.form.get("name")
-    commit = request.form.get("commit")
     timestamp = request.form.get("timestamp")
     path = file_utils.get_dex_path(userId, name, timestamp)
     file_path = os.path.join(path, file.filename)
-    commit_file_path = os.path.join(path, "commit.txt")
     print(f"saving file: {file_path}")
-    print(f"saving commit file: {commit_file_path}")
     file_utils.mkdir(path)
     file_utils.save_file(file, file_path)
-    with open(commit_file_path, 'w') as fout:
-        fout.write(commit)
+    '''
+    return {}
+
+
+# sample related
+'''
+Name: get_sample_number
+Method: Get
+Form:
+    - taskListId
+    - taskId
+    - subtaskId
+    - recordId
+
+Response:
+    - Number of samples
+'''
+@app.route("/sample_number", methods=["GET"])
+def get_sample_number():
+    pass
+
+'''
+Name: get_sample
+Method: Get
+Form:
+    - taskListId
+    - taskId
+    - subtaskId
+    - recordId
+    - sampleId
+
+Response:
+    - sample
+'''
+@app.route("/sample", methods=["GET"])
+def get_sample():
+    pass
+
+
+'''
+Name: delete_sample
+Method: Delete
+Content-Type: multipart/form-data
+Form:
+    - taskListId
+    - taskId
+    - subtaskId
+    - recordId
+'''
+@app.route("/sample", methods=["DELETE"])
+def delete_sample():
+    pass
+
+
+# train related
+'''
+Name: get_cutter_type
+Method: Get
+Response: 
+    - cutter_type
+'''
+@app.route("/cutter_type", methods=["GET"])
+def get_cutter_type():
+    response = []
+    cutters = [PeakCutter(0), RandomCutter()]
+    for cutter in cutters:
+        response.append(cutter.to_json())
+    return {"result": response}
+
+'''
+Name: get_train_list
+Method: Get
+Response:
+    - List(trainId)
+'''
+@app.route("/train_list", methods=["GET"])
+def get_train_list():
+    response = []
+    for trainId in os.listdir(file_utils.DATA_TRAIN_ROOT):
+        if trainId.startswith('XT'):
+            train_info_path = file_utils.get_train_info_path(trainId)
+            response.append(file_utils.load_json(train_info_path))
+    response.sort(key=lambda x: -x['timestamp'])
+    return {"trainList": response}
+
+'''
+Name: start_train
+Method: Post
+Content-Type: multipart/form-data
+Form:
+    - trainId
+    - trainName
+    - taskListId
+    - taskIdList  List(taskId)
+    - timestamp
+'''
+@app.route("/train", methods=["POST"])
+def start_train():
+    global train_processes
+    trainId = request.form.get("trainId")
+    trainName = request.form.get("trainName")
+    taskListId = request.form.get("taskListId")
+    taskIdList = request.form.get("taskIdList").strip().split(',')
+    timestamp = int(request.form.get("timestamp"))
+    train_path = file_utils.get_train_path(trainId)
+    file_utils.mkdir(train_path)
+    train_info_path = file_utils.get_train_info_path(trainId)
+
+    train_info = {
+        'name': trainName,
+        'id': trainId,
+        'taskListId': taskListId,
+        'taskIdList': taskIdList,
+        'timestamp': timestamp,
+        'status': 'Preprocessing'
+    }
+    file_utils.save_json(train_info, train_info_path)
+
+    new_process = TrainProcess(train_info_path, taskListId, taskIdList, trainId, timestamp)
+    train_processes.append(new_process)
+    new_process.start()
     return {}
 
 '''
-Name: list_files in dir
-Method: GET
+Name: stop_train
+Method: Delete
 Content-Type: multipart/form-data
 Form:
-    - name
+    - trainId
 '''
-@app.route("/dir", methods=['GET'])
-def list_file_dir():
-    filename = request.args.get("name")
-    return json.dumps(os.listdir(os.path.join(file_utils.DATA_FILE_ROOT, filename)))
-
-
+@app.route("/train", methods=["DELETE"])
+def stop_train():
+    global train_processes
+    trainId = request.form.get("trainId")
+    for process in train_processes:
+        if process is not None and process.get_trainId() == trainId:
+            process.interrupt()
+            process.terminate()
+            train_processes.remove(process)
+    train_processes = list(filter(None, train_processes))
+    return {}
+    
 
 '''
 Name: download_file
@@ -502,4 +746,4 @@ def update_md5():
 
 if __name__ == '__main__':
     update_md5()
-    app.run(port=29000, host="0.0.0.0")
+    app.run(port=6125, host="0.0.0.0")
