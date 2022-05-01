@@ -6,7 +6,7 @@ from flask_cors import CORS, cross_origin
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import file_utils
-import os
+import os,zipfile
 
 
 app = Flask(__name__)
