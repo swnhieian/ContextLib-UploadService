@@ -26,7 +26,7 @@ def get_dex_user_path(userId, name):
 def get_dex_path(userId, name, timestamp):
     beijingTimeZone = datetime.timezone(datetime.timedelta(hours=8))
     d = datetime.datetime.fromtimestamp(int(timestamp) / 1000, tz=beijingTimeZone)
-    return os.path.join(get_dex_user_path(userId, name), str(d.year), str(d.month), str(d.day), timestamp)
+    return os.path.join(get_dex_user_path(userId, name), d.strftime("%Y-%m-%d"))
 
 def get_taskList_path(taskListId):
     return os.path.join(DATA_RECORD_ROOT, taskListId)
