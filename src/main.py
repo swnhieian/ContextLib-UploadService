@@ -435,6 +435,9 @@ def upload_collected_data():
             file_utils.save_file(file, file_path)
             error = False
             with zipfile.ZipFile(file_path, 'r') as file_zip:
+                for m in meta:
+                    if m['file'] not in file_zip.namelist():
+                        error = True
                 for name in file_zip.namelist():
                     print(name, flush=True)
                     meta_ = None
