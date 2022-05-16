@@ -135,6 +135,8 @@ def save_record_file(file, file_path):
     '''
 
 def save_file(file, file_path):
+    # ref: https://stackoverflow.com/a/7389295/11854304
+    file.stream.seek(0)
     file.save(file_path)
 
 def calc_file_md5(file_name):
