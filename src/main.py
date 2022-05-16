@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import file_utils
 import os,zipfile
+import sys
 
 
 app = Flask(__name__)
@@ -390,6 +391,15 @@ def upload_record_file():
     return {}
 
 
+def backup(file, meta_str):
+    unknown_datetime_path = file_utils.get_unknown_datetime_path()
+    file_path = os.path.join(unknown_datetime_path, file.filename)
+    file_utils.mkdir(unknown_datetime_path)
+    file_utils.save_file(file, file_path)
+    meta_path = os.path.join(unknown_datetime_path, file.filename + '.meta')
+    with open(meta_path, 'w') as fout:
+        fout.write(meta_str)
+
 '''
 Name: upload_collected_data
 Method: Post
@@ -413,39 +423,46 @@ Form:
 @app.route("/collected_data", methods=['POST'])
 def upload_collected_data():
     file = request.files["file"]
-    print(file.filename)
-    meta = json.loads(request.form.get("meta"))
-    print(meta)
-
-    if file.filename[-4:] == '.zip':
-        temp_path = file_utils.get_temp_path()
-        file_path = os.path.join(temp_path, file.filename)
-        file_utils.mkdir(temp_path)
-        file_utils.save_file(file, file_path)
-
-        file_zip = zipfile.ZipFile(file_path, 'r')
-        for name in file_zip.namelist():
-            print(name)
-            meta_ = None
-            for m in meta:
-                if m['file'] == name:
-                    meta_ = m
-            print(meta_)
-            if meta_ is not None:
-                path = file_utils.get_dex_path(meta_['userId'], meta_['name'], str(meta_['timestamp']))
-                file_utils.mkdir(path)
-                file_zip.extract(meta_['file'], path)
-                with open(os.path.join(path, meta_['file'] + '.meta'), 'w') as fout:
-                    fout.write(json.dumps(meta_))
-        file_zip.close()
-        os.remove(file_path)
-    else:
-        path = file_utils.get_dex_path(meta[0]['userId'], meta[0]['name'], str(meta[0]['timestamp']))
-        file_utils.mkdir(path)
-        file_path = os.path.join(path, meta[0]['file'])
-        file_utils.save_file(file, file_path)
-        with open(os.path.join(path, meta[0]['file'] + '.meta'), 'w') as fout:
-            fout.write(json.dumps(meta[0]))
+    print(file.filename, flush=True)
+    meta_str = request.form.get("meta")
+    try:
+        meta = json.loads(meta_str)
+        print(meta, flush=True)
+        if file.filename[-4:] == '.zip':
+            temp_path = file_utils.get_temp_path()
+            file_path = os.path.join(temp_path, file.filename)
+            file_utils.mkdir(temp_path)
+            file_utils.save_file(file, file_path)
+            error = False
+            with zipfile.ZipFile(file_path, 'r') as file_zip:
+                for name in file_zip.namelist():
+                    print(name, flush=True)
+                    meta_ = None
+                    for m in meta:
+                        if m['file'] == name:
+                            meta_ = m
+                    print(meta_, flush=True)
+                    if meta_ is not None:
+                        path = file_utils.get_dex_path(meta_['userId'], meta_['name'], str(meta_['timestamp']))
+                        file_utils.mkdir(path)
+                        file_zip.extract(meta_['file'], path)
+                        with open(os.path.join(path, meta_['file'] + '.meta'), 'w') as fout:
+                            fout.write(json.dumps(meta_))
+                    else:
+                        error = True
+            if error:
+                backup(file, meta_str)
+            os.remove(file_path)
+        else:
+            path = file_utils.get_dex_path(meta[0]['userId'], meta[0]['name'], str(meta[0]['timestamp']))
+            file_utils.mkdir(path)
+            file_path = os.path.join(path, meta[0]['file'])
+            file_utils.save_file(file, file_path)
+            with open(os.path.join(path, meta[0]['file'] + '.meta'), 'w') as fout:
+                fout.write(json.dumps(meta[0]))
+    except Exception as e:
+        print(e, file=sys.stderr)
+        backup(file, meta_str)
 
 
     '''

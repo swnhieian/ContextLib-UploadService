@@ -11,11 +11,21 @@ DATA_TRAIN_ROOT = os.path.join(DATA_ROOT, "train")
 DATA_FILE_ROOT = os.path.join(DATA_ROOT, "file")
 DATA_DEX_ROOT = os.path.join(DATA_ROOT, "dex")
 DATA_TEMP_ROOT  = os.path.join(DATA_ROOT, "temp")
+DATA_UNKNOWN_ROOT  = os.path.join(DATA_ROOT, "unknown")
 
 md5 = dict()
 
+beijingTimeZone = datetime.timezone(datetime.timedelta(hours=8))
+
 def get_temp_path():
     return DATA_TEMP_ROOT
+
+def get_unknown_path():
+    return DATA_UNKNOWN_ROOT
+
+def get_unknown_datetime_path():
+    d = datetime.datetime.now(tz=beijingTimeZone)
+    return os.path.join(get_unknown_path(), d.strftime("%Y%m%d_%H%M%S_%f"))
 
 def get_dex_name_path(name):
     return os.path.join(DATA_DEX_ROOT, name)
@@ -24,7 +34,6 @@ def get_dex_user_path(userId, name):
     return os.path.join(get_dex_name_path(name), userId)
 
 def get_dex_path(userId, name, timestamp):
-    beijingTimeZone = datetime.timezone(datetime.timedelta(hours=8))
     d = datetime.datetime.fromtimestamp(int(timestamp) / 1000, tz=beijingTimeZone)
     return os.path.join(get_dex_user_path(userId, name), d.strftime("%Y-%m-%d"))
 
