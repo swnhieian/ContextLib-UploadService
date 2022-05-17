@@ -11,21 +11,25 @@ DATA_TRAIN_ROOT = os.path.join(DATA_ROOT, "train")
 DATA_FILE_ROOT = os.path.join(DATA_ROOT, "file")
 DATA_DEX_ROOT = os.path.join(DATA_ROOT, "dex")
 DATA_TEMP_ROOT  = os.path.join(DATA_ROOT, "temp")
-DATA_UNKNOWN_ROOT  = os.path.join(DATA_ROOT, "unknown")
+DATA_BACKUP_ROOT  = os.path.join(DATA_ROOT, "backup")
+DATA_LOG_ROOT  = os.path.join(DATA_ROOT, "log")
 
 md5 = dict()
 
 beijingTimeZone = datetime.timezone(datetime.timedelta(hours=8))
 
+def get_log_path():
+    return DATA_LOG_ROOT
+
 def get_temp_path():
     return DATA_TEMP_ROOT
 
-def get_unknown_path():
-    return DATA_UNKNOWN_ROOT
+def get_backup_path():
+    return DATA_BACKUP_ROOT
 
-def get_unknown_datetime_path():
+def get_backup_datetime_path():
     d = datetime.datetime.now(tz=beijingTimeZone)
-    return os.path.join(get_unknown_path(), d.strftime("%Y%m%d_%H%M%S_%f"))
+    return os.path.join(get_backup_path(), d.strftime("%Y-%m-%d"), d.strftime("%Y%m%d_%H%M%S_%f"))
 
 def get_dex_name_path(name):
     return os.path.join(DATA_DEX_ROOT, name)
@@ -77,7 +81,7 @@ def delete_dir(path):
 
 def mkdir(path):
     if not os.path.exists(path):
-        os.makedirs(path)
+        os.makedirs(path, exist_ok=True)
 
 def save_json(obj, path):
     with open(path, 'w') as fout:

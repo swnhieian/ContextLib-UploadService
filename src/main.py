@@ -8,7 +8,33 @@ import json
 import file_utils
 import os,zipfile
 import sys
+import logging
+from logging.handlers import TimedRotatingFileHandler
 
+
+def init_logger():
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    log_path = file_utils.get_log_path()
+    file_utils.mkdir(log_path)
+
+    normal_log_handler = TimedRotatingFileHandler(os.path.join(log_path, "normal.log"), when="midnight", interval=1)
+    normal_log_handler.setLevel(logging.DEBUG)
+    normal_log_handler.setFormatter(formatter)
+    normal_log_handler.suffix = "%Y%m%d_%H%M%S"
+
+    error_log_handler = TimedRotatingFileHandler(os.path.join(log_path, "error.log"), when="midnight", interval=1)
+    error_log_handler.setLevel(logging.ERROR)
+    error_log_handler.setFormatter(formatter)
+    error_log_handler.suffix = "%Y%m%d_%H%M%S"
+
+    logger = logging.getLogger('context-server')
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(normal_log_handler)
+    logger.addHandler(error_log_handler)
+
+    return logger
+
+logger = init_logger()
 
 app = Flask(__name__)
 cors = CORS(app)
@@ -392,13 +418,14 @@ def upload_record_file():
 
 
 def backup(file, meta_str):
-    unknown_datetime_path = file_utils.get_unknown_datetime_path()
-    file_path = os.path.join(unknown_datetime_path, file.filename)
-    file_utils.mkdir(unknown_datetime_path)
+    backup_datetime_path = file_utils.get_backup_datetime_path()
+    file_path = os.path.join(backup_datetime_path, file.filename)
+    file_utils.mkdir(backup_datetime_path)
     file_utils.save_file(file, file_path)
-    meta_path = os.path.join(unknown_datetime_path, file.filename + '.meta')
+    meta_path = os.path.join(backup_datetime_path, file.filename + '.meta')
     with open(meta_path, 'w') as fout:
         fout.write(meta_str)
+    return file_path
 
 '''
 Name: upload_collected_data
@@ -425,19 +452,17 @@ def upload_collected_data():
     file = request.files["file"]
     print(file.filename, flush=True)
     meta_str = request.form.get("meta")
+    logger.info("get file: " + file.filename)
+    logger.info("get meta: " + meta_str)
     try:
+        file_path = backup(file, meta_str)
         meta = json.loads(meta_str)
         print(meta, flush=True)
         if file.filename[-4:] == '.zip':
-            temp_path = file_utils.get_temp_path()
-            file_path = os.path.join(temp_path, file.filename)
-            file_utils.mkdir(temp_path)
-            file_utils.save_file(file, file_path)
-            error = False
             with zipfile.ZipFile(file_path, 'r') as file_zip:
                 for m in meta:
                     if m['file'] not in file_zip.namelist():
-                        error = True
+                        logger.error("Not in zip's name list: " + m['file'])
                 for name in file_zip.namelist():
                     print(name, flush=True)
                     meta_ = None
@@ -447,15 +472,17 @@ def upload_collected_data():
                     print(meta_, flush=True)
                     if meta_ is not None:
                         path = file_utils.get_dex_path(meta_['userId'], meta_['name'], str(meta_['timestamp']))
+                        extracted_file_path = os.path.join(path, meta_['file'])
+                        if os.path.exists(extracted_file_path):
+                            logger.error("already uploaded, override: " + extracted_file_path)
+                        else:
+                            logger.info("extract: " + extracted_file_path)
                         file_utils.mkdir(path)
                         file_zip.extract(meta_['file'], path)
                         with open(os.path.join(path, meta_['file'] + '.meta'), 'w') as fout:
                             fout.write(json.dumps(meta_))
                     else:
-                        error = True
-            if error:
-                backup(file, meta_str)
-            os.remove(file_path)
+                        logger.error("Not in meta info: " + name)
         else:
             path = file_utils.get_dex_path(meta[0]['userId'], meta[0]['name'], str(meta[0]['timestamp']))
             file_utils.mkdir(path)
@@ -464,8 +491,7 @@ def upload_collected_data():
             with open(os.path.join(path, meta[0]['file'] + '.meta'), 'w') as fout:
                 fout.write(json.dumps(meta[0]))
     except Exception as e:
-        print(e, file=sys.stderr)
-        backup(file, meta_str)
+        logger.exception("Exception happens")
 
 
     '''
