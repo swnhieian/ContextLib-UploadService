@@ -185,7 +185,7 @@ class Formatter(logging.Formatter):
 
 
 def init_logger():
-    formatter = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', '%Y-%m-%d %z %H:%M:%S.%f')
+    formatter = Formatter('%(asctime)s - %(levelname)s - %(message)s', '%Y-%m-%d %z %H:%M:%S.%f')
     log_path = get_log_path()
     mkdir(log_path)
 
