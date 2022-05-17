@@ -7,34 +7,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import file_utils
 import os,zipfile
-import sys
-import logging
-from logging.handlers import TimedRotatingFileHandler
 
 
-def init_logger():
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    log_path = file_utils.get_log_path()
-    file_utils.mkdir(log_path)
-
-    normal_log_handler = TimedRotatingFileHandler(os.path.join(log_path, "normal.log"), when="midnight", interval=1)
-    normal_log_handler.setLevel(logging.DEBUG)
-    normal_log_handler.setFormatter(formatter)
-    normal_log_handler.suffix = "%Y%m%d_%H%M%S"
-
-    error_log_handler = TimedRotatingFileHandler(os.path.join(log_path, "error.log"), when="midnight", interval=1)
-    error_log_handler.setLevel(logging.ERROR)
-    error_log_handler.setFormatter(formatter)
-    error_log_handler.suffix = "%Y%m%d_%H%M%S"
-
-    logger = logging.getLogger('context-server')
-    logger.setLevel(logging.DEBUG)
-    logger.addHandler(normal_log_handler)
-    logger.addHandler(error_log_handler)
-
-    return logger
-
-logger = init_logger()
+logger = file_utils.init_logger()
 
 app = Flask(__name__)
 cors = CORS(app)

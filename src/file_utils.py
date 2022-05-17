@@ -4,6 +4,9 @@ import shutil
 import hashlib
 from time import time
 import datetime
+import logging
+from logging.handlers import TimedRotatingFileHandler
+
 
 DATA_ROOT = os.path.join("..", "data")
 DATA_RECORD_ROOT = os.path.join(DATA_ROOT, "record")
@@ -165,4 +168,40 @@ def get_md5(filename):
         return md5[filename]
     return ""
 
-    
+
+## ref: https://stackoverflow.com/a/27865750/11854304
+class Formatter(logging.Formatter):
+    def converter(self, timestamp):
+        return datetime.datetime.fromtimestamp(timestamp, tz=beijingTimeZone)
+
+    def formatTime(self, record, datefmt=None):
+        dt = self.converter(record.created)
+        if datefmt:
+            s = dt.strftime(datefmt)
+        else:
+            t = dt.strftime(self.default_time_format)
+            s = self.default_msec_format % (t, record.msecs)
+        return s
+
+
+def init_logger():
+    formatter = Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', '%Y-%m-%d %z %H:%M:%S.%f')
+    log_path = get_log_path()
+    mkdir(log_path)
+
+    normal_log_handler = TimedRotatingFileHandler(os.path.join(log_path, "normal.log"), when="midnight", interval=1)
+    normal_log_handler.setLevel(logging.DEBUG)
+    normal_log_handler.setFormatter(formatter)
+    normal_log_handler.suffix = "%Y%m%d_%H%M%S"
+
+    error_log_handler = TimedRotatingFileHandler(os.path.join(log_path, "error.log"), when="midnight", interval=1)
+    error_log_handler.setLevel(logging.ERROR)
+    error_log_handler.setFormatter(formatter)
+    error_log_handler.suffix = "%Y%m%d_%H%M%S"
+
+    logger = logging.getLogger('context-server')
+    logger.setLevel(logging.DEBUG)
+    logger.addHandler(normal_log_handler)
+    logger.addHandler(error_log_handler)
+
+    return logger
