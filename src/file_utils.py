@@ -171,8 +171,13 @@ def get_md5(filename):
 
 ## ref: https://stackoverflow.com/a/27865750/11854304
 class Formatter(logging.Formatter):
+    def __init__(self, *args, **kwargs):
+        ## use local timezone as default
+        self.tz = kwargs.pop('tz', datetime.datetime.now().astimezone().tzinfo)
+        super().__init__(*args, **kwargs)
+
     def converter(self, timestamp):
-        return datetime.datetime.fromtimestamp(timestamp, tz=beijingTimeZone)
+        return datetime.datetime.fromtimestamp(timestamp, tz=self.tz)
 
     def formatTime(self, record, datefmt=None):
         dt = self.converter(record.created)
@@ -185,7 +190,7 @@ class Formatter(logging.Formatter):
 
 
 def init_logger():
-    formatter = Formatter('%(asctime)s - %(levelname)s - %(message)s', '%Y-%m-%d %z %H:%M:%S.%f')
+    formatter = Formatter('%(asctime)s - %(levelname)s - %(message)s', '%Y-%m-%d %H:%M:%S.%f %z', tz=beijingTimeZone)
     log_path = get_log_path()
     mkdir(log_path)
 
@@ -195,12 +200,12 @@ def init_logger():
     normal_log_handler = TimedRotatingFileHandler(os.path.join(log_path, "normal.log"), when="midnight", interval=1, atTime=rollover_time)
     normal_log_handler.setLevel(logging.DEBUG)
     normal_log_handler.setFormatter(formatter)
-    normal_log_handler.suffix = "%Y%m%d_%H%M%S"
+    normal_log_handler.suffix = "%Y%m%d_%H%M%S_%z"
 
     error_log_handler = TimedRotatingFileHandler(os.path.join(log_path, "error.log"), when="midnight", interval=1, atTime=rollover_time)
     error_log_handler.setLevel(logging.ERROR)
     error_log_handler.setFormatter(formatter)
-    error_log_handler.suffix = "%Y%m%d_%H%M%S"
+    error_log_handler.suffix = "%Y%m%d_%H%M%S_%z"
 
     logger = logging.getLogger('context-server')
     logger.setLevel(logging.DEBUG)
