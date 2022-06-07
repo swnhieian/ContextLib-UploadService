@@ -2,12 +2,13 @@ version: "3"
 
 services:
   contextlib-upload:
-    build: ./
+    # build: ./
     image: swnhieian/context-lib-upload
     ports:
-      - "29000:29000"
+      - "29000:80"
     volumes:
       - ./data:/flask/data
+      - ./src:/flask/src
     deploy:
       restart_policy:
         condition: on-failure
