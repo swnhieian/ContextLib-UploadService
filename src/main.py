@@ -18,8 +18,9 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 @app.route("/version", methods=['POST'])
 def get_version():
     deviceInfo = request.get_json()
-    logger.info("version: " + deviceInfo)
-    return "pocket"
+    result = "pocket"
+    logger.info("version: " + json.dumps(deviceInfo) + " res: " + result)
+    return result
 
 
 def backup(file, meta_str):
@@ -138,7 +139,7 @@ Form:
 def download_file():
     filename = request.args.get("filename")
     return send_file(os.path.join(file_utils.DATA_FILE_ROOT, filename))
-    
+
 
 
 
@@ -155,7 +156,7 @@ def upload_file():
     if file:
         file_utils.save_file(file, os.path.join(file_utils.DATA_FILE_ROOT, file.filename))
         file_utils.update_md5()
-    
+
     return {}
 
 
