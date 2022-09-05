@@ -6,6 +6,7 @@ from time import time
 import datetime
 import logging
 from logging.handlers import TimedRotatingFileHandler
+from concurrent_log import ConcurrentTimedRotatingFileHandler
 
 
 DATA_ROOT = os.path.join("..", "data")
@@ -197,12 +198,14 @@ def init_logger():
     ## rollover at midnight at Beijing time zone
     rollover_time = datetime.time(hour=0, minute=0, second=0, microsecond=0, tzinfo=beijingTimeZone)
 
-    normal_log_handler = TimedRotatingFileHandler(os.path.join(log_path, "normal.log"), when="midnight", interval=1, atTime=rollover_time)
+    # normal_log_handler = TimedRotatingFileHandler(os.path.join(log_path, "normal.log"), when="midnight", interval=1, atTime=rollover_time)
+    normal_log_handler = ConcurrentTimedRotatingFileHandler(os.path.join(log_path, "normal.log"), when="midnight", interval=1, atTime=rollover_time)
     normal_log_handler.setLevel(logging.DEBUG)
     normal_log_handler.setFormatter(formatter)
     normal_log_handler.suffix = "%Y%m%d_%H%M%S_%z"
 
-    error_log_handler = TimedRotatingFileHandler(os.path.join(log_path, "error.log"), when="midnight", interval=1, atTime=rollover_time)
+    # error_log_handler = TimedRotatingFileHandler(os.path.join(log_path, "error.log"), when="midnight", interval=1, atTime=rollover_time)
+    error_log_handler = ConcurrentTimedRotatingFileHandler(os.path.join(log_path, "error.log"), when="midnight", interval=1, atTime=rollover_time)
     error_log_handler.setLevel(logging.ERROR)
     error_log_handler.setFormatter(formatter)
     error_log_handler.suffix = "%Y%m%d_%H%M%S_%z"

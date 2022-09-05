@@ -19,6 +19,11 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 def get_version():
     deviceInfo = request.get_json()
     result = "pocket"
+    if "version_code" in deviceInfo:
+        if deviceInfo['version_code'] < 80:
+            result = "pocket"
+        else:
+            result = "v20220816"
     logger.info("version: " + json.dumps(deviceInfo) + " res: " + result)
     return result
 
